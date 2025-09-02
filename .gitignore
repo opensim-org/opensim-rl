@@ -1,0 +1,12 @@
+# VSCode
+.vscode/
+
+# Dependencies
+/dependencies/benchmark
+/dependencies/opensim
+
+# OpenSim logs
+opensim.log
+
+# pycache
+__pycache__/
