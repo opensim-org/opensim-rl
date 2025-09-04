@@ -19,7 +19,10 @@ DEFAULT_OBSERVATION_LIST = [
     "whole_body_linear_momentum",
     "whole_body_angular_momentum",
     "controls",
-    "activations"
+    "muscle_activations",
+    "muscle_lengths",
+    "muscle_velocities",
+    "muscle_forces",
 ]
 
 OBSERVATION_SCALES = {
@@ -37,7 +40,10 @@ OBSERVATION_SCALES = {
     "whole_body_linear_momentum": 1000.0,
     "whole_body_angular_momentum": 1000.0,
     "controls": 1.0,
-    "activations": 1.0
+    "muscle_activations": 1.0,
+    "muscle_lengths": 1.0,
+    "muscle_velocities": 10.0,
+    "muscle_forces": 1000.0,
 }
 
 class OpenSimModel:
@@ -94,25 +100,27 @@ class OpenSimModel:
         self.controller.setName('brain')
         self.model.addController(self.controller)
 
-        # Model activations.
-        # -----------------
-        self.num_activations = 0
-        self.activation_muscles = []
-        self.activation_coordinate_actuators = []
+        # Muscles activations.
+        # --------------------
+        self.num_muscles = 0
+        self.muscles = []
         # TODO: find a cleaner way to do this
         for component in self.model.getComponentsList():
             if "Muscle" in component.getConcreteClassName():
-                if "MuscleFixedWidthPennationModel" in component.getConcreteClassName():
+                if "MuscleFixedWidth" in component.getConcreteClassName():
                     continue
-                if "MuscleFirstOrderActivationDynamicModel" in component.getConcreteClassName():
+                if "MuscleFirstOrderActivation" in component.getConcreteClassName():
                     continue
 
-                if not component.get_ignore_activation_dynamics():
-                    self.num_activations += 1
-                    self.activation_muscles.append(component)
+                if component.get_ignore_activation_dynamics():
+                    raise Exception("Muscles with ignored activation dynamics are "
+                                    "not supported.")
+
+                self.muscles.append(component)
+                self.num_muscles += 1
+
             elif "ActivationCoordinateActuator" in component.getConcreteClassName():
-                self.num_activations += 1
-                self.activation_coordinate_actuators.append(component)
+                raise Exception("ActivationCoordinateActuator are not supported.")
 
         # Force aggregators.
         # ------------------
@@ -154,11 +162,11 @@ class OpenSimModel:
         self.outputs = self.calc_outputs()
         self.previous_outputs = self.calc_outputs()
 
+    def get_num_muscles(self):
+        return self.num_muscles
+
     def get_num_controls(self):
         return self.num_controls
-
-    def get_num_activations(self):
-        return self.num_activations
 
     def get_num_bodies(self):
         return self.model.getNumBodies()
@@ -202,18 +210,33 @@ class OpenSimModel:
         self.outputs = self.calc_outputs()
         self.previous_outputs = self.calc_outputs()
 
-    def get_activations(self, state):
-        activations = np.zeros((self.get_num_activations(),), dtype=np.float32)
-        iact = 0
-        for muscle in self.activation_muscles:
-            activations[iact] = muscle.getActivation(state)
-            iact += 1
-
-        for actuator in self.activation_coordinate_actuators:
-            activations[iact] = actuator.getActivation(state)
-            iact += 1
+    def get_muscle_activations(self, state):
+        activations = np.zeros((self.get_num_muscles(),), dtype=np.float32)
+        for imusc, muscle in enumerate(self.muscles):
+            activations[imusc] = muscle.getActivation(state)
 
         return activations
+
+    def get_muscle_lengths(self, state):
+        lengths = np.zeros((self.get_num_muscles(),), dtype=np.float32)
+        for imusc, muscle in enumerate(self.muscles):
+            lengths[imusc] = muscle.getLength(state)
+
+        return lengths
+
+    def get_muscle_velocities(self, state):
+        velocities = np.zeros((self.get_num_muscles(),), dtype=np.float32)
+        for imusc, muscle in enumerate(self.muscles):
+            velocities[imusc] = muscle.getLengtheningSpeed(state)
+
+        return velocities
+
+    def get_muscle_forces(self, state):
+        forces = np.zeros((self.get_num_muscles(),), dtype=np.float32)
+        for imusc, muscle in enumerate(self.muscles):
+            forces[imusc] = muscle.getTendonForce(state)
+
+        return forces
 
     def get_observation_space(self):
         return gym.spaces.Box(
@@ -223,6 +246,8 @@ class OpenSimModel:
     def calc_outputs(self):
         outputs = dict()
         self.model.realizeAcceleration(self.state)
+
+        # TODO: generalize to all OpenSim Outputs
 
         # coordinate kinematics
         outputs["coordinate_values"] = np.zeros((self.get_num_coordinates(),),
@@ -290,8 +315,11 @@ class OpenSimModel:
         controls = self.controller.getDiscreteControls(self.state).to_numpy()
         outputs["controls"] = np.array(controls, dtype=np.float32)
 
-        # activations
-        outputs["activations"] = self.get_activations(self.state)
+        # muscles
+        outputs["muscle_activations"] = self.get_muscle_activations(self.state)
+        outputs["muscle_lengths"] = self.get_muscle_lengths(self.state)
+        outputs["muscle_velocities"] = self.get_muscle_velocities(self.state)
+        outputs["muscle_forces"] = self.get_muscle_forces(self.state)
 
         # forces
         for key in self.aggregators:
@@ -384,10 +412,19 @@ class OpenSimModel:
             obs.append(outputs["controls"])
             obs[-1] /= OBSERVATION_SCALES["controls"]
 
-        # activations
-        if self.observation_list["activations"]:
-            obs.append(outputs["activations"])
-            obs[-1] /= OBSERVATION_SCALES["activations"]
+        # muscles
+        if self.observation_list["muscle_activations"]:
+            obs.append(outputs["muscle_activations"])
+            obs[-1] /= OBSERVATION_SCALES["muscle_activations"]
+        if self.observation_list["muscle_lengths"]:
+            obs.append(outputs["muscle_lengths"])
+            obs[-1] /= OBSERVATION_SCALES["muscle_lengths"]
+        if self.observation_list["muscle_velocities"]:
+            obs.append(outputs["muscle_velocities"])
+            obs[-1] /= OBSERVATION_SCALES["muscle_velocities"]
+        if self.observation_list["muscle_forces"]:
+            obs.append(outputs["muscle_forces"])
+            obs[-1] /= OBSERVATION_SCALES["muscle_forces"]
 
         # force
         for key in self.aggregators:

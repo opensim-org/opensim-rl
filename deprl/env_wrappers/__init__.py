@@ -2,6 +2,7 @@ import deprl  # noqa
 from deprl.env_wrappers.dm_wrapper import DMWrapper, OstrichDMWrapper
 from deprl.env_wrappers.gym_wrapper import GymWrapper
 from deprl.env_wrappers.scone_wrapper import SconeWrapper
+from deprl.env_wrappers.opensim_wrapper import OpenSimWrapper
 
 
 def apply_wrapper(env):
@@ -11,6 +12,8 @@ def apply_wrapper(env):
         return DMWrapper(env)
     elif "scone" in str(env).lower():
         return SconeWrapper(env)
+    elif "opensim" in str(env).lower():
+        return OpenSimWrapper(env)
     else:
         return GymWrapper(env)
 

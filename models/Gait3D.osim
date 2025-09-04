@@ -2858,7 +2858,7 @@
 						<!--All properties of this object have their default values.-->
 					</TendonForceLengthCurve>
 				</Millard2012EquilibriumMuscle>
-				<ActivationCoordinateActuator name="lumbar_coord_0_torque">
+				<CoordinateActuator name="lumbar_coord_0_torque">
 					<!--Minimum allowed value for control signal. Used primarily when solving for control values.-->
 					<min_control>-1</min_control>
 					<!--Maximum allowed value for control signal. Used primarily when solving for control values.-->
@@ -2867,10 +2867,8 @@
 					<coordinate>lumbar_coord_0</coordinate>
 					<!--The maximum generalized force produced by this actuator.-->
 					<optimal_force>100</optimal_force>
-					<!--Larger value means activation changes more slowly (units: seconds; default: 0.01 seconds).-->
-					<activation_time_constant>0.050000000000000003</activation_time_constant>
-				</ActivationCoordinateActuator>
-				<ActivationCoordinateActuator name="lumbar_coord_1_torque">
+				</CoordinateActuator>
+				<CoordinateActuator name="lumbar_coord_1_torque">
 					<!--Minimum allowed value for control signal. Used primarily when solving for control values.-->
 					<min_control>-1</min_control>
 					<!--Maximum allowed value for control signal. Used primarily when solving for control values.-->
@@ -2879,10 +2877,8 @@
 					<coordinate>lumbar_coord_1</coordinate>
 					<!--The maximum generalized force produced by this actuator.-->
 					<optimal_force>100</optimal_force>
-					<!--Larger value means activation changes more slowly (units: seconds; default: 0.01 seconds).-->
-					<activation_time_constant>0.050000000000000003</activation_time_constant>
-				</ActivationCoordinateActuator>
-				<ActivationCoordinateActuator name="lumbar_coord_2_torque">
+				</CoordinateActuator>
+				<CoordinateActuator name="lumbar_coord_2_torque">
 					<!--Minimum allowed value for control signal. Used primarily when solving for control values.-->
 					<min_control>-1</min_control>
 					<!--Maximum allowed value for control signal. Used primarily when solving for control values.-->
@@ -2891,9 +2887,7 @@
 					<coordinate>lumbar_coord_2</coordinate>
 					<!--The maximum generalized force produced by this actuator.-->
 					<optimal_force>100</optimal_force>
-					<!--Larger value means activation changes more slowly (units: seconds; default: 0.01 seconds).-->
-					<activation_time_constant>0.050000000000000003</activation_time_constant>
-				</ActivationCoordinateActuator>
+				</CoordinateActuator>
 				<CoordinateLinearDamper name="lumbar_coord_0_damper">
 					<!--Coordinate (name) to apply force to.-->
 					<coordinate>lumbar_coord_0</coordinate>

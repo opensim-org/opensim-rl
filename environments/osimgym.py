@@ -81,7 +81,10 @@ class Gait3DEnv(OpenSimGym):
             # "whole_body_linear_momentum",
             # "whole_body_angular_momentum",
             "controls",
-            "activations"
+            "muscle_activations",
+            "muscle_lengths",
+            "muscle_velocities",
+            "muscle_forces",
         ]
 
         limit_torques = [
@@ -197,10 +200,10 @@ class Gait3DEnv(OpenSimGym):
         outputs = self.model.get_outputs()
         prev_outputs = self.model.get_previous_outputs()
 
-        muscle_activity = np.sum(np.power(outputs['activations'], 3))
+        muscle_activity = np.sum(np.power(outputs['muscle_activations'], 3))
         excitation_smoothness = np.sum(
                 np.power(outputs['controls'] - prev_outputs['controls'], 2))
-        num_active = np.sum(outputs['activations'] > 0.15)
+        num_active = np.sum(outputs['muscle_activations'] > 0.15)
         # print('muscle activity: ', muscle_activity)
         # print('excitation smoothness: ', excitation_smoothness)
         # print('num active: ', num_active)
