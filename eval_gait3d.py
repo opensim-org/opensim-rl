@@ -13,7 +13,7 @@ def compute_discounted_return(rewards, gamma=0.0):
     return np.sum(rewards * discounts)
 
 models_dir = "models_gait3d/PPO" # location of models
-model_path = f"{models_dir}/80000.zip" # the name of the model to use
+model_path = f"{models_dir}/110000.zip" # the name of the model to use
 
 register(id="Gait3DEnv",
          entry_point="environments.osimgym:Gait3DEnv",
@@ -26,7 +26,7 @@ policy = PPO.load(model_path, env=wrapped_env)
 
 terminated = False
 obs, info = wrapped_env.reset(seed=0)
-for i in range(100):
+for i in range(10000):
     action, _ = policy.predict(obs, deterministic=True)
     obs, reward, terminated, truncated, info = wrapped_env.step(action)
     print(reward)

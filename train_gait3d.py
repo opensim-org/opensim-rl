@@ -35,7 +35,7 @@ def make_env(env_id="Gait3DEnv", seed=0, rank=0):
     return _init
 
 if __name__ == "__main__":
-    num_envs = 5
+    num_envs = 10
     train_envs = SubprocVecEnv([make_env(seed=42 + i) for i in range(num_envs)])
     policy_kwargs = dict(activation_fn=th.nn.ReLU,
                      net_arch=dict(pi=[128, 64], vf=[64, 64]))
@@ -45,8 +45,5 @@ if __name__ == "__main__":
             policy_kwargs=policy_kwargs, gamma=0.998)
 
 
-    timesteps = 10000
-    for i in range(1,250):
-        model.learn(total_timesteps=timesteps, reset_num_timesteps=False,
-                    tb_log_name="PPO_test", progress_bar=True)
-        model.save(f"{models_dir}/{timesteps*i}")
+    timesteps = 100000
+    model.learn(total_timesteps=timesteps, progress_bar=True)
