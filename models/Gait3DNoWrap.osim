@@ -2830,23 +2830,59 @@
 						<!--All properties of this object have their default values.-->
 					</TendonForceLengthCurve>
 				</Millard2012EquilibriumMuscle>
+				<ActivationCoordinateActuator name="lumbar_coord_0_torque">
+					<!--Minimum allowed value for control signal. Used primarily when solving for control values.-->
+					<min_control>-1</min_control>
+					<!--Maximum allowed value for control signal. Used primarily when solving for control values.-->
+					<max_control>1</max_control>
+					<!--Name of the generalized coordinate to which the actuator applies.-->
+					<coordinate>lumbar_coord_0</coordinate>
+					<!--The maximum generalized force produced by this actuator.-->
+					<optimal_force>100</optimal_force>
+					<!--Larger value means activation changes more slowly (units: seconds; default: 0.01 seconds).-->
+					<activation_time_constant>0.050000000000000003</activation_time_constant>
+				</ActivationCoordinateActuator>
+				<ActivationCoordinateActuator name="lumbar_coord_1_torque">
+					<!--Minimum allowed value for control signal. Used primarily when solving for control values.-->
+					<min_control>-1</min_control>
+					<!--Maximum allowed value for control signal. Used primarily when solving for control values.-->
+					<max_control>1</max_control>
+					<!--Name of the generalized coordinate to which the actuator applies.-->
+					<coordinate>lumbar_coord_1</coordinate>
+					<!--The maximum generalized force produced by this actuator.-->
+					<optimal_force>100</optimal_force>
+					<!--Larger value means activation changes more slowly (units: seconds; default: 0.01 seconds).-->
+					<activation_time_constant>0.050000000000000003</activation_time_constant>
+				</ActivationCoordinateActuator>
+				<ActivationCoordinateActuator name="lumbar_coord_2_torque">
+					<!--Minimum allowed value for control signal. Used primarily when solving for control values.-->
+					<min_control>-1</min_control>
+					<!--Maximum allowed value for control signal. Used primarily when solving for control values.-->
+					<max_control>1</max_control>
+					<!--Name of the generalized coordinate to which the actuator applies.-->
+					<coordinate>lumbar_coord_2</coordinate>
+					<!--The maximum generalized force produced by this actuator.-->
+					<optimal_force>100</optimal_force>
+					<!--Larger value means activation changes more slowly (units: seconds; default: 0.01 seconds).-->
+					<activation_time_constant>0.050000000000000003</activation_time_constant>
+				</ActivationCoordinateActuator>
 				<CoordinateLinearDamper name="lumbar_coord_0_damper">
 					<!--Coordinate (name) to apply force to.-->
 					<coordinate>lumbar_coord_0</coordinate>
 					<!--Damping coefficient (N-m/(rad/s) for rotational, N/(m/s) for translational)-->
-					<damping>10</damping>
+					<damping>1</damping>
 				</CoordinateLinearDamper>
 				<CoordinateLinearDamper name="lumbar_coord_1_damper">
 					<!--Coordinate (name) to apply force to.-->
 					<coordinate>lumbar_coord_1</coordinate>
 					<!--Damping coefficient (N-m/(rad/s) for rotational, N/(m/s) for translational)-->
-					<damping>10</damping>
+					<damping>1</damping>
 				</CoordinateLinearDamper>
 				<CoordinateLinearDamper name="lumbar_coord_2_damper">
 					<!--Coordinate (name) to apply force to.-->
 					<coordinate>lumbar_coord_2</coordinate>
 					<!--Damping coefficient (N-m/(rad/s) for rotational, N/(m/s) for translational)-->
-					<damping>10</damping>
+					<damping>1</damping>
 				</CoordinateLinearDamper>
 				<CoordinateLinearDamper name="hip_l_coord_0_damper">
 					<!--Coordinate (name) to apply force to.-->
@@ -2916,9 +2952,9 @@
 					<!--Damping coefficient (N-m/(rad/s) for rotational, N/(m/s) for translational)-->
 					<damping>2.95953</damping>
 					<!--High position (rad for rotational, m for translational)-->
-					<q_high>0.17453292519943295</q_high>
+					<q_high>0.3490658503988659</q_high>
 					<!--Low position (rad for rotational, m for translational)-->
-					<q_low>-0.17453292519943295</q_low>
+					<q_low>-0.3490658503988659</q_low>
 				</CoordinateLinearStop>
 				<CoordinateLinearStop name="lumbar_coord_1_stop">
 					<!--Coordinate (name) to apply force to.-->
@@ -2928,9 +2964,9 @@
 					<!--Damping coefficient (N-m/(rad/s) for rotational, N/(m/s) for translational)-->
 					<damping>2.95953</damping>
 					<!--High position (rad for rotational, m for translational)-->
-					<q_high>0.17453292519943295</q_high>
+					<q_high>0.3490658503988659</q_high>
 					<!--Low position (rad for rotational, m for translational)-->
-					<q_low>-0.17453292519943295</q_low>
+					<q_low>-0.3490658503988659</q_low>
 				</CoordinateLinearStop>
 				<CoordinateLinearStop name="lumbar_coord_2_stop">
 					<!--Coordinate (name) to apply force to.-->
@@ -2940,9 +2976,9 @@
 					<!--Damping coefficient (N-m/(rad/s) for rotational, N/(m/s) for translational)-->
 					<damping>2.95953</damping>
 					<!--High position (rad for rotational, m for translational)-->
-					<q_high>0.17453292519943295</q_high>
+					<q_high>0.3490658503988659</q_high>
 					<!--Low position (rad for rotational, m for translational)-->
-					<q_low>-0.17453292519943295</q_low>
+					<q_low>-0.3490658503988659</q_low>
 				</CoordinateLinearStop>
 				<CoordinateLinearStop name="hip_l_coord_0_stop">
 					<!--Coordinate (name) to apply force to.-->
@@ -3046,7 +3082,7 @@
 					<!--Stiffness coefficient (N-m/rad for rotational, N/m for translational)-->
 					<stiffness>500</stiffness>
 					<!--Damping coefficient (N-m/(rad/s) for rotational, N/(m/s) for translational)-->
-					<damping>1.4176200000000001</damping>
+					<damping>2.95953</damping>
 					<!--High position (rad for rotational, m for translational)-->
 					<q_high>0.43633231299858238</q_high>
 					<!--Low position (rad for rotational, m for translational)-->
@@ -3058,7 +3094,7 @@
 					<!--Stiffness coefficient (N-m/rad for rotational, N/m for translational)-->
 					<stiffness>500</stiffness>
 					<!--Damping coefficient (N-m/(rad/s) for rotational, N/(m/s) for translational)-->
-					<damping>1.4176200000000001</damping>
+					<damping>2.95953</damping>
 					<!--High position (rad for rotational, m for translational)-->
 					<q_high>0.43633231299858238</q_high>
 					<!--Low position (rad for rotational, m for translational)-->
