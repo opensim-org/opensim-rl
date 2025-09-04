@@ -10,3 +10,6 @@ opensim.log
 
 # pycache
 __pycache__/
+
+models_gait3d/
+logs_gait3d/

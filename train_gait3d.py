@@ -5,6 +5,9 @@ from gymnasium.wrappers import FlattenObservation
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.utils import set_random_seed
 
+# from wandb.integration.sb3 import WandbCallback
+
+
 import os
 import torch as th
 
@@ -34,16 +37,28 @@ def make_env(env_id="Gait3DEnv", seed=0, rank=0):
     set_random_seed(seed)
     return _init
 
+config = {
+    "policy_type": "MlpPolicy",
+    "total_timesteps": 1000000,
+    "env_id": "Gait3DEnv",
+}
+# run = wandb.init(
+#     project="gait3d",
+#     config=config,
+#     sync_tensorboard=True,
+# )
 if __name__ == "__main__":
     num_envs = 10
-    train_envs = SubprocVecEnv([make_env(seed=42 + i) for i in range(num_envs)])
-    policy_kwargs = dict(activation_fn=th.nn.ReLU,
-                     net_arch=dict(pi=[128, 64], vf=[64, 64]))
-
-
-    model = PPO("MlpPolicy", train_envs, verbose=2,
-            policy_kwargs=policy_kwargs, gamma=0.998)
-
-
-    timesteps = 100000
-    model.learn(total_timesteps=timesteps, progress_bar=True)
+    envs = SubprocVecEnv([make_env(seed=42 + i) for i in range(num_envs)])
+    model = PPO(config["policy_type"], envs, verbose=1)
+            # tensorboard_log=f"runs/{run.id}")
+    model.learn(
+        total_timesteps=config["total_timesteps"],
+        progress_bar=True,
+        # callback=WandbCallback(
+        #     model_save_path=f"models/{run.id}",
+        #     verbose=2,
+        # ),
+    )
+    model.save(f"{models_dir}/{config['total_timesteps']}")
+    # run.finish()

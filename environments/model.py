@@ -5,23 +5,32 @@ import gymnasium as gym
 from copy import deepcopy
 
 DEFAULT_OBSERVATION_LIST = [
-    "coordinate_kinematics",
-    "body_kinematics",
-    "center_of_mass_kinematics",
-    "whole_body_momentum",
+    "coordinate_values",
+    "coordinate_speeds",
+    "body_positions",
+    "body_velocities",
+    "body_accelerations",
+    "body_orientations",
+    "body_angular_velocities",
+    "body_angular_accelerations",
+    "center_of_mass_position",
+    "center_of_mass_velocity",
+    "center_of_mass_acceleration",
+    "whole_body_linear_momentum",
+    "whole_body_angular_momentum",
     "controls",
     "activations"
 ]
 
 OBSERVATION_SCALES = {
-    "coordinate_values": 5.0*np.pi,
-    "coordinate_speeds": 50.0*np.pi,
+    "coordinate_values": 2.0*np.pi,
+    "coordinate_speeds": 20.0*np.pi,
     "body_positions": 5.0,
-    "body_velocities": 50.0,
-    "body_accelerations": 500.0,
-    "body_orientations": 50.0*np.pi,
-    "body_angular_velocities": 500.0*np.pi,
-    "body_angular_accelerations": 5000.0*np.pi,
+    "body_velocities": 20.0,
+    "body_accelerations": 200.0,
+    "body_orientations": 5.0*np.pi,
+    "body_angular_velocities": 50.0*np.pi,
+    "body_angular_accelerations": 500.0*np.pi,
     "center_of_mass_position": 5.0,
     "center_of_mass_velocity": 50.0,
     "center_of_mass_acceleration": 500.0,
@@ -31,27 +40,16 @@ OBSERVATION_SCALES = {
     "activations": 1.0
 }
 
-AGGREGATED_FORCE_LIST = [
-    "ExponentialContactForce",
-    "CoordinateLinearStop",
-]
-
-FORCE_SCALES = {
-    "ExponentialContactForce": 25000.0,
-    "CoordinateLinearStop": 5000.0,
-}
-
 class OpenSimModel:
     """
     A class to store an OpenSim model and convenient methods for reinforcement learning.
     """
-    obs = dict()
-    prev_obs = dict()
+    outputs = dict()
+    previous_outputs = dict()
 
     def __init__(self, model_filepath, visualize, accuracy, step_size,
                  observation_list=DEFAULT_OBSERVATION_LIST,
-                 force_list=AGGREGATED_FORCE_LIST,
-                 force_scales=FORCE_SCALES):
+                 aggregators=dict(), aggregator_scales=dict()):
 
         # Initialize the OpenSim model.
         self.model = osim.Model(model_filepath)
@@ -101,6 +99,7 @@ class OpenSimModel:
         self.num_activations = 0
         self.activation_muscles = []
         self.activation_coordinate_actuators = []
+        # TODO: find a cleaner way to do this
         for component in self.model.getComponentsList():
             if "Muscle" in component.getConcreteClassName():
                 if "MuscleFixedWidthPennationModel" in component.getConcreteClassName():
@@ -117,15 +116,13 @@ class OpenSimModel:
 
         # Force aggregators.
         # ------------------
-        self.force_list = force_list
-        self.force_scales = force_scales
-        assert(len(force_list) == len(force_scales))
-        for force_class in AGGREGATED_FORCE_LIST:
+        self.aggregators = aggregators
+        self.aggregator_scales = aggregator_scales
+        for key in aggregators.keys():
             force_aggregator = osim.ForceAggregator()
-            force_aggregator.setName(f'{force_class}_aggregator')
-            for component in self.model.getComponentsList():
-                if force_class in component.getConcreteClassName():
-                    force_aggregator.addForce(component)
+            force_aggregator.setName(f'{key}_aggregator')
+            for force_path in aggregators[key]:
+                force_aggregator.addForce(self.model.getComponent(force_path))
             self.model.addComponent(force_aggregator)
 
         # Initialize the state.
@@ -154,8 +151,8 @@ class OpenSimModel:
         self.observation_list = {obs: obs in observation_list
                                  for obs in DEFAULT_OBSERVATION_LIST}
 
-        self.obs = self.calc_observations()
-        self.prev_obs = self.calc_observations()
+        self.outputs = self.calc_outputs()
+        self.previous_outputs = self.calc_outputs()
 
     def get_num_controls(self):
         return self.num_controls
@@ -194,14 +191,16 @@ class OpenSimModel:
         self.manager.initialize(self.state)
         self.istep = self.istep + 1
         self.state = self.manager.integrate(self.step_size * self.istep)
-        self.prev_obs = self.obs
-        self.obs = self.calc_observations()
+        self.previous_outputs = self.outputs.copy()
+        self.outputs = self.calc_outputs()
 
     def reset(self):
         self.state = self.model.initializeState()
         # TODO self.model.equilibrateMuscles(self.state)
         self.state.setTime(0.0)
         self.istep = 0
+        self.outputs = self.calc_outputs()
+        self.previous_outputs = self.calc_outputs()
 
     def get_activations(self, state):
         activations = np.zeros((self.get_num_activations(),), dtype=np.float32)
@@ -217,212 +216,188 @@ class OpenSimModel:
         return activations
 
     def get_observation_space(self):
-        obs_dict = {}
+        return gym.spaces.Box(
+            low=-1, high=1, shape=self.get_observations().shape, dtype=np.float32
+        )
 
-        # coordinate kinematics
-        if self.observation_list["coordinate_kinematics"]:
-            obs_dict["coordinate_values"] = gym.spaces.Box(low=-1, high=1,
-                    shape=(self.get_num_coordinates(),), dtype=np.float32)
-            obs_dict["coordinate_speeds"] = gym.spaces.Box(low=-1, high=1,
-                    shape=(self.get_num_coordinates(),), dtype=np.float32)
-
-        # body kinematics
-        if self.observation_list['body_kinematics']:
-            obs_dict["body_positions"] = gym.spaces.Box(low=-1, high=1,
-                    shape=(self.get_num_bodies(), 3), dtype=np.float32)
-            obs_dict["body_velocities"] = gym.spaces.Box(low=-1, high=1,
-                    shape=(self.get_num_bodies(), 3), dtype=np.float32)
-            obs_dict["body_accelerations"] = gym.spaces.Box(low=-1, high=1,
-                    shape=(self.get_num_bodies(), 3), dtype=np.float32)
-            obs_dict["body_orientations"] = gym.spaces.Box(low=-1, high=1,
-                    shape=(self.get_num_bodies(), 3), dtype=np.float32)
-            obs_dict["body_angular_velocities"] = gym.spaces.Box(low=-1, high=1,
-                    shape=(self.get_num_bodies(), 3), dtype=np.float32)
-            obs_dict["body_angular_accelerations"] = gym.spaces.Box(low=-1, high=1,
-                    shape=(self.get_num_bodies(), 3), dtype=np.float32)
-
-        # center of mass kinematics
-        if self.observation_list["center_of_mass_kinematics"]:
-            obs_dict["center_of_mass_position"] = gym.spaces.Box(low=-1, high=1,
-                    shape=(3,), dtype=np.float32)
-            obs_dict["center_of_mass_velocity"] = gym.spaces.Box(low=-1, high=1,
-                    shape=(3,), dtype=np.float32)
-            obs_dict["center_of_mass_acceleration"] = gym.spaces.Box(low=-1, high=1,
-                    shape=(3,), dtype=np.float32)
-
-        # whole body momentum
-        if self.observation_list["whole_body_momentum"]:
-            obs_dict["whole_body_linear_momentum"] = gym.spaces.Box(low=-1, high=1,
-                    shape=(3,), dtype=np.float32)
-            obs_dict["whole_body_angular_momentum"] = gym.spaces.Box(low=-1, high=1,
-                    shape=(3,), dtype=np.float32)
-
-        # controls
-        if self.observation_list["controls"]:
-            obs_dict["controls"] = gym.spaces.Box(low=-1, high=1,
-                    shape=(self.get_num_controls(),), dtype=np.float32)
-
-        # activations
-        if self.observation_list["activations"]:
-            obs_dict["activations"] = gym.spaces.Box(low=-1, high=1,
-                    shape=(self.get_num_activations(),), dtype=np.float32)
-
-        # forces
-        for force_class in self.force_list:
-            obs_dict[f'{force_class}_generalized_forces'] = gym.spaces.Box(low=-1, high=1,
-                    shape=(self.get_num_mobilities(),), dtype=np.float32)
-            obs_dict[f'{force_class}_body_torque'] = gym.spaces.Box(low=-1, high=1,
-                    shape=(3,), dtype=np.float32)
-            obs_dict[f'{force_class}_body_force'] = gym.spaces.Box(low=-1, high=1,
-                    shape=(3,), dtype=np.float32)
-
-        return gym.spaces.Dict(obs_dict)
-
-    def get_observations(self):
-        return self.obs
-
-    def get_previous_observations(self):
-        return self.prev_obs
-
-    def calc_observations(self):
+    def calc_outputs(self):
+        outputs = dict()
         self.model.realizeAcceleration(self.state)
 
         # coordinate kinematics
-        if self.observation_list["coordinate_kinematics"]:
-            self.obs["coordinate_values"] = np.zeros((self.get_num_coordinates(),),
+        outputs["coordinate_values"] = np.zeros((self.get_num_coordinates(),),
                                                 dtype=np.float32)
-            self.obs["coordinate_speeds"] = np.zeros((self.get_num_coordinates(),),
-                                                dtype=np.float32)
-            coordinate_set = self.model.getCoordinateSet()
-            for i in range(coordinate_set.getSize()):
-                coord = coordinate_set.get(i)
-                self.obs["coordinate_values"][i] = coord.getValue(self.state)
-                self.obs["coordinate_speeds"][i] = coord.getSpeedValue(self.state)
+        outputs["coordinate_speeds"] = np.zeros((self.get_num_coordinates(),),
+                                            dtype=np.float32)
+        coordinate_set = self.model.getCoordinateSet()
+        for i in range(coordinate_set.getSize()):
+            coord = coordinate_set.get(i)
+            if self.observation_list["coordinate_values"]:
+                outputs["coordinate_values"][i] = coord.getValue(self.state)
+            if self.observation_list["coordinate_speeds"]:
+                outputs["coordinate_speeds"][i] = coord.getSpeedValue(self.state)
 
         # body kinematics
-        if self.observation_list['body_kinematics']:
-            self.obs["body_positions"] = np.zeros((self.get_num_bodies(),3),
-                                                dtype=np.float32)
-            self.obs["body_velocities"] = np.zeros((self.get_num_bodies(),3),
-                                                dtype=np.float32)
-            self.obs["body_accelerations"] = np.zeros((self.get_num_bodies(),3),
-                                                dtype=np.float32)
-            self.obs["body_orientations"] = np.zeros((self.get_num_bodies(),3),
-                                                dtype=np.float32)
-            self.obs["body_angular_velocities"] = np.zeros((self.get_num_bodies(),3),
-                                                dtype=np.float32)
-            self.obs["body_angular_accelerations"] = np.zeros((self.get_num_bodies(),3),
-                                                dtype=np.float32)
-            body_set = self.model.getBodySet()
-            for i in range(body_set.getSize()):
-                body = body_set.get(i)
-                transform = body.getTransformInGround(self.state)
-                velocity = body.getVelocityInGround(self.state)
-                acceleration = body.getAccelerationInGround(self.state)
+        outputs["body_positions"] = np.zeros((self.get_num_bodies(), 3),
+                dtype=np.float32)
+        outputs["body_velocities"] = np.zeros((self.get_num_bodies(), 3),
+                dtype=np.float32)
+        outputs["body_accelerations"] = np.zeros((self.get_num_bodies(), 3),
+                dtype=np.float32)
+        outputs["body_orientations"] = np.zeros((self.get_num_bodies(), 3),
+                dtype=np.float32)
+        outputs["body_angular_velocities"] = np.zeros((self.get_num_bodies(), 3),
+                dtype=np.float32)
+        outputs["body_angular_accelerations"] = np.zeros((self.get_num_bodies(), 3),
+                dtype=np.float32)
+        body_set = self.model.getBodySet()
+        for i in range(body_set.getSize()):
+            body = body_set.get(i)
+            transform = body.getTransformInGround(self.state)
+            velocity = body.getVelocityInGround(self.state)
+            acceleration = body.getAccelerationInGround(self.state)
 
-                self.obs["body_positions"][i] = transform.p().to_numpy()
-                self.obs["body_velocities"][i] = velocity.get(1).to_numpy()
-                self.obs["body_accelerations"][i] = acceleration.get(1).to_numpy()
+            outputs["body_positions"][i] = transform.p().to_numpy()
+            outputs["body_velocities"][i] = velocity.get(1).to_numpy()
+            outputs["body_accelerations"][i] = acceleration.get(1).to_numpy()
 
-                self.obs["body_orientations"][i] = \
-                        transform.R().convertRotationToBodyFixedXYZ().to_numpy()
-                self.obs["body_angular_velocities"][i] = velocity.get(0).to_numpy()
-                self.obs["body_angular_accelerations"][i] = acceleration.get(0).to_numpy()
+            outputs["body_orientations"][i] = \
+                    transform.R().convertRotationToBodyFixedXYZ().to_numpy()
+            outputs["body_angular_velocities"][i] = velocity.get(0).to_numpy()
+            outputs["body_angular_accelerations"][i] = \
+                    acceleration.get(0).to_numpy()
 
         # center of mass kinematics
-        if self.observation_list["center_of_mass_kinematics"]:
-            self.obs["center_of_mass_position"] = np.array(
-                    self.model.calcMassCenterPosition(self.state).to_numpy(),
-                    dtype=np.float32)
-            self.obs["center_of_mass_velocity"] = np.array(
-                    self.model.calcMassCenterVelocity(self.state).to_numpy(),
-                    dtype=np.float32)
-            self.obs["center_of_mass_acceleration"] = np.array(
-                    self.model.calcMassCenterAcceleration(self.state).to_numpy(),
-                    dtype=np.float32)
+        outputs["center_of_mass_position"] = np.array(
+                self.model.calcMassCenterPosition(self.state).to_numpy(),
+                dtype=np.float32)
+        outputs["center_of_mass_velocity"] = np.array(
+                self.model.calcMassCenterVelocity(self.state).to_numpy(),
+                dtype=np.float32)
+        outputs["center_of_mass_acceleration"] = np.array(
+                self.model.calcMassCenterAcceleration(self.state).to_numpy(),
+                dtype=np.float32)
 
         # whole body momentum
-        if self.observation_list["whole_body_momentum"]:
-            self.obs["whole_body_linear_momentum"] = np.array(
-                    self.model.calcLinearMomentum(self.state).to_numpy(),
-                    dtype=np.float32)
-            self.obs["whole_body_angular_momentum"] = np.array(
-                    self.model.calcAngularMomentum(self.state).to_numpy(),
-                    dtype=np.float32)
+        outputs["whole_body_linear_momentum"] = np.array(
+                self.model.calcLinearMomentum(self.state).to_numpy(),
+                dtype=np.float32)
+        outputs["whole_body_angular_momentum"] = np.array(
+                self.model.calcAngularMomentum(self.state).to_numpy(),
+                dtype=np.float32)
 
         # controls
-        if self.observation_list["controls"]:
-            controls = self.controller.getDiscreteControls(self.state).to_numpy()
-            self.obs["controls"] = np.array(controls, dtype=np.float32)
+        controls = self.controller.getDiscreteControls(self.state).to_numpy()
+        outputs["controls"] = np.array(controls, dtype=np.float32)
 
         # activations
-        if self.observation_list["activations"]:
-            self.obs["activations"] = self.get_activations(self.state)
+        outputs["activations"] = self.get_activations(self.state)
 
         # forces
-        for force_class in self.force_list:
+        for key in self.aggregators:
+            outputs[f'{key}_generalized_forces'] = np.zeros(
+                    (self.get_num_mobilities(),), dtype=np.float32)
+            outputs[f'{key}_body_torques'] = np.zeros(
+                    (self.get_num_bodies(), 3), dtype=np.float32)
+            outputs[f'{key}_body_forces'] = np.zeros(
+                    (self.get_num_bodies(), 3), dtype=np.float32)
+
             force_aggregator = osim.ForceAggregator.safeDownCast(
-                self.model.getComponent(f'{force_class}_aggregator'))
-            # TODO: summing body forces but not mobility forces
+                self.model.getComponent(f'{key}_aggregator'))
             generalized_forces = force_aggregator.getGeneralizedForces(self.state)
-            body_force = force_aggregator.getBodyForcesSum(self.state)
-            self.obs[f'{force_class}_generalized_forces'] = \
+            body_forces = force_aggregator.getBodyForces(self.state)
+            outputs[f'{key}_generalized_forces'] = \
                     np.array(generalized_forces.to_numpy(), dtype=np.float32)
-            self.obs[f'{force_class}_body_torque'] = \
-                    np.array(body_force.get(0).to_numpy(), dtype=np.float32)
-            self.obs[f'{force_class}_body_force'] = \
-                    np.array(body_force.get(1).to_numpy(), dtype=np.float32)
+            for ibody in range(self.get_num_bodies()):
+                outputs[f'{key}_body_torques'][ibody] = \
+                        body_forces.get(ibody).get(0).to_numpy()
+                outputs[f'{key}_body_forces'][ibody] = \
+                        body_forces.get(ibody).get(1).to_numpy()
 
-        return self.obs
+        return outputs
 
-    def get_scaled_observations(self):
+    def get_outputs(self):
+        return self.outputs
 
-        obs = deepcopy(self.obs)
+    def get_previous_outputs(self):
+        return self.previous_outputs
+
+    def get_observations(self):
+        outputs = self.get_outputs()
+        obs = list()
 
         # coordinate kinematics
-        if self.observation_list["coordinate_kinematics"]:
-            obs["coordinate_values"] /= OBSERVATION_SCALES["coordinate_values"]
-            obs["coordinate_speeds"] /= OBSERVATION_SCALES["coordinate_speeds"]
+        if self.observation_list["coordinate_values"]:
+            obs.append(outputs["coordinate_values"])
+            obs[-1] /= OBSERVATION_SCALES["coordinate_values"]
+        if self.observation_list["coordinate_speeds"]:
+            obs.append(outputs["coordinate_speeds"])
+            obs[-1] /= OBSERVATION_SCALES["coordinate_speeds"]
 
         # body kinematics
-        if self.observation_list['body_kinematics']:
-            obs["body_positions"] /= OBSERVATION_SCALES["body_positions"]
-            obs["body_velocities"] /= OBSERVATION_SCALES["body_velocities"]
-            obs["body_accelerations"] /= OBSERVATION_SCALES["body_accelerations"]
-            obs["body_orientations"] /= OBSERVATION_SCALES["body_orientations"]
-            obs["body_angular_velocities"] /= \
-                OBSERVATION_SCALES["body_angular_velocities"]
-            obs["body_angular_accelerations"] /= \
-                OBSERVATION_SCALES["body_angular_accelerations"]
+        if self.observation_list['body_positions']:
+            obs.append(np.reshape(outputs["body_positions"],
+                                  (3*self.get_num_bodies(),)))
+            obs[-1] /= OBSERVATION_SCALES["body_positions"]
+        if self.observation_list['body_velocities']:
+            obs.append(np.reshape(outputs["body_velocities"],
+                                  (3*self.get_num_bodies(),)))
+            obs[-1] /= OBSERVATION_SCALES["body_velocities"]
+        if self.observation_list['body_accelerations']:
+            obs.append(np.reshape(outputs["body_accelerations"],
+                                  (3*self.get_num_bodies(),)))
+            obs[-1] /= OBSERVATION_SCALES["body_accelerations"]
+        if self.observation_list['body_orientations']:
+            obs.append(np.reshape(outputs["body_orientations"],
+                                  (3*self.get_num_bodies(),)))
+            obs[-1] /= OBSERVATION_SCALES["body_orientations"]
+        if self.observation_list['body_angular_velocities']:
+            obs.append(np.reshape(outputs["body_angular_velocities"],
+                                  (3*self.get_num_bodies(),)))
+            obs[-1] /= OBSERVATION_SCALES["body_angular_velocities"]
+        if self.observation_list['body_angular_accelerations']:
+            obs.append(np.reshape(outputs["body_angular_accelerations"],
+                                  (3*self.get_num_bodies(),)))
+            obs[-1] /= OBSERVATION_SCALES["body_angular_accelerations"]
 
         # center of mass kinematics
-        if self.observation_list["center_of_mass_kinematics"]:
-            obs["center_of_mass_position"] /= \
-                OBSERVATION_SCALES["center_of_mass_position"]
-            obs["center_of_mass_velocity"] /= \
-                OBSERVATION_SCALES["center_of_mass_velocity"]
-            obs["center_of_mass_acceleration"] /= \
-                OBSERVATION_SCALES["center_of_mass_acceleration"]
+        if self.observation_list["center_of_mass_position"]:
+            obs.append(outputs["center_of_mass_position"])
+            obs[-1] /= OBSERVATION_SCALES["center_of_mass_position"]
+        if self.observation_list["center_of_mass_velocity"]:
+            obs.append(outputs["center_of_mass_velocity"])
+            obs[-1] /= OBSERVATION_SCALES["center_of_mass_velocity"]
+        if self.observation_list["center_of_mass_acceleration"]:
+            obs.append(outputs["center_of_mass_acceleration"])
+            obs[-1] /= OBSERVATION_SCALES["center_of_mass_acceleration"]
 
         # whole body momentum
-        if self.observation_list["whole_body_momentum"]:
-            obs["whole_body_linear_momentum"] /= \
-                OBSERVATION_SCALES["whole_body_linear_momentum"]
-            obs["whole_body_angular_momentum"] /= \
-                OBSERVATION_SCALES["whole_body_angular_momentum"]
+        if self.observation_list["whole_body_linear_momentum"]:
+            obs.append(outputs["whole_body_linear_momentum"])
+            obs[-1] /= OBSERVATION_SCALES["whole_body_linear_momentum"]
+        if self.observation_list["whole_body_angular_momentum"]:
+            obs.append(outputs["whole_body_angular_momentum"])
+            obs[-1] /= OBSERVATION_SCALES["whole_body_angular_momentum"]
 
         # controls
         if self.observation_list["controls"]:
-            obs["controls"] /= OBSERVATION_SCALES["controls"]
+            obs.append(outputs["controls"])
+            obs[-1] /= OBSERVATION_SCALES["controls"]
 
         # activations
         if self.observation_list["activations"]:
-            obs["activations"] /= OBSERVATION_SCALES["activations"]
+            obs.append(outputs["activations"])
+            obs[-1] /= OBSERVATION_SCALES["activations"]
 
         # force
-        for force_class in self.force_list:
-            obs[f'{force_class}_generalized_forces'] /= self.force_scales[force_class]
-            obs[f'{force_class}_body_torque'] /= self.force_scales[force_class]
-            obs[f'{force_class}_body_force'] /= self.force_scales[force_class]
+        for key in self.aggregators:
+            obs.append(outputs[f'{key}_generalized_forces'])
+            obs[-1] /= self.aggregator_scales[key]
+            obs.append(np.reshape(outputs[f'{key}_body_torques'],
+                                  (3*self.get_num_bodies(),)))
+            obs[-1] /= self.aggregator_scales[key]
+            obs.append(np.reshape(outputs[f'{key}_body_forces'],
+                                  (3*self.get_num_bodies(),)))
+            obs[-1] /= self.aggregator_scales[key]
 
-        return obs
+        return np.concatenate(obs, dtype=np.float32).copy()

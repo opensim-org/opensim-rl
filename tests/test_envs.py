@@ -1,19 +1,18 @@
 import os
 import opensim as osim
 import numpy as np
-from environments.osimgym import Gait3DEnv
+import gymnasium as gym
+from gymnasium.envs.registration import register
 
-# Use absolute path relative to this file's location
-model_path = os.path.join(os.path.dirname(__file__), '..', 'models', 'Gait3D.osim')
+register(id="Gait3DEnv",
+         entry_point="environments.osimgym:Gait3DEnv",
+         )
 
+env = gym.make("Gait3DEnv")
+actions = np.random.rand(env.env.env.model.get_num_controls())
 
-env = Gait3DEnv(model_path)
-
-actions = np.zeros(env.model.get_num_controls())
-actions[5] = 0.5
-
+env.reset()
 n_steps = 1000
-
 for step in range(n_steps):
     obs, reward, terminated, truncated, info = env.step(actions)
     print(reward)
