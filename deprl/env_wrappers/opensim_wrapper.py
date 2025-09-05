@@ -37,6 +37,12 @@ class OpenSimWrapper(ExceptionWrapper):
     def muscle_activity(self):
         return self.unwrapped.model.get_outputs()["muscle_activations"]
 
+    def get_state(self):
+        return self.unwrapped.model.get_state()
+
+    def get_model(self):
+        return self.unwrapped.model.get_model()
+
     @property
     def _max_episode_steps(self):
         return 1000

@@ -162,6 +162,12 @@ class OpenSimModel:
         self.outputs = self.calc_outputs()
         self.previous_outputs = self.calc_outputs()
 
+    def get_model(self):
+        return self.model
+
+    def get_state(self):
+        return self.state
+
     def get_num_muscles(self):
         return self.num_muscles
 

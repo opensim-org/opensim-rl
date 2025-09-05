@@ -13,15 +13,24 @@ register(id="Gait3DEnv",
          entry_point="environments.osimgym:Gait3DEnv"
          )
 
-env = gym.make("Gait3DEnv", visualize=True)
+env = gym.make("Gait3DEnv", visualize=False)
 env = env_wrappers.OpenSimWrapper(env)
 
 dep = DEP()
 dep.initialize(env.observation_space, env.action_space)
 
+states_traj = osim.StatesTrajectory()
 env.reset()
 for i in range(1000):
+    print('step: ', i)
     muscle_lengths = np.concatenate([env.muscle_lengths(), np.array([1.0, 1.0, 1.0])], dtype=np.float32)
     action = dep.step(muscle_lengths)[0, :]
-    next_state, reward, done, _ = env.step(action)
+    obs, reward, done, _ = env.step(action)
+    states_traj.append(env.get_state())
     time.sleep(0.005)
+
+table = states_traj.exportToTable(env.get_model())
+table.addTableMetaDataString("inDegrees", "no")
+osim.VisualizerUtilities.showMotion(env.get_model(), table)
+
+
