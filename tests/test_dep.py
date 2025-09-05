@@ -32,5 +32,3 @@ for i in range(1000):
 table = states_traj.exportToTable(env.get_model())
 table.addTableMetaDataString("inDegrees", "no")
 osim.VisualizerUtilities.showMotion(env.get_model(), table)
-
-

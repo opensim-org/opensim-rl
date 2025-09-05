@@ -1,0 +1,94 @@
+# syntax=docker/dockerfile:1
+FROM ubuntu:22.04
+
+# TODO: update to Ubuntu 24.04 and Python 3.12 with virtual env
+
+RUN apt-get update && apt-get install -y build-essential
+
+# Install Python 3
+RUN apt-get install -y python3 python3-pip python3-dev python3-numpy python3-setuptools
+
+# Install NumPy
+RUN pip install numpy
+
+# Install zip
+RUN apt-get install -y zip
+
+# Install Git
+RUN apt-get install -y git
+
+# Install curl
+RUN apt-get install -y curl
+
+# Install CMake
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y cmake
+
+# Install blas
+RUN apt-get install -y libopenblas-dev liblapack-dev
+
+# Install wget
+RUN apt-get install -y wget
+
+# Install pkgconf
+RUN apt-get install -y pkgconf
+
+# Install fortran
+RUN apt-get install -y gfortran
+
+# Install autoconf and libtool
+RUN apt-get install -y autoconf libtool
+
+# Install PCRE2
+RUN apt-get install -y libpcre2-dev
+
+# Install yacc
+RUN apt-get install -y byacc
+
+# Install SWIG
+RUN wget -nc -q --show-progress https://github.com/swig/swig/archive/refs/tags/v4.1.1.tar.gz && \
+    tar -xzf v4.1.1.tar.gz && \
+    cd swig-4.1.1 && \
+    ./autogen.sh && \
+    ./configure --prefix=$HOME/swig --disable-ccache && \
+    make -j8 && \
+    make install && \
+    cd .. && \
+    rm -rf swig-4.1.1 v4.1.1.tar.gz
+
+# Install OpenSim dependencies
+RUN git clone https://github.com/nickbianco/opensim-core.git && \
+    cd opensim-core && \
+    git checkout gait3d
+
+RUN mkdir opensim_dependencies_build && \
+    cd opensim_dependencies_build && \
+    cmake ../opensim-core/dependencies \
+        -DCMAKE_INSTALL_PREFIX="/root/opensim_dependencies_install" \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DOPENSIM_WITH_CASADI=OFF && \
+    cmake . -LAH && \
+    cmake --build . --config RelWithDebInfo -j4
+
+# Install OpenSim
+RUN mkdir opensim_build && \
+    cd opensim_build && \
+    cmake ../opensim-core \
+        -DCMAKE_INSTALL_PREFIX="/root/opensim_install" \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DOPENSIM_WITH_CASADI=OFF \
+        -DBUILD_PYTHON_WRAPPING=ON \
+        -DBUILD_JAVA_WRAPPING=OFF \
+        -DBUILD_TESTING=OFF \
+        -DOPENSIM_DEPENDENCIES_DIR="/root/opensim_dependencies_install" \
+        -DOPENSIM_INSTALL_UNIX_FHS=OFF \
+        -DSWIG_DIR="/root/swig/share/swig" \
+        -DSWIG_EXECUTABLE="/root/swig/bin/swig" \
+        -DWITH_BTK=ON && \
+    cmake . -LAH && \
+    cmake --build . --config RelWithDebInfo -j4 && \
+    cmake --install .
+
+# Install OpenSim Python interface
+ENV LD_LIBRARY_PATH="/root/opensim_install/sdk/lib:/root/opensim_install/sdk/Simbody/lib"
+RUN cd /root/opensim_install/sdk/Python && \
+    python3 -m pip install .
