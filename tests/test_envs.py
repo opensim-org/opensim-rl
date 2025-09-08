@@ -4,11 +4,11 @@ import numpy as np
 import gymnasium as gym
 from gymnasium.envs.registration import register
 
-register(id="Gait3DEnv",
-         entry_point="environments.osimgym:Gait3DEnv",
+register(id="Gait3D",
+         entry_point="environments.osimgym:Gait3D",
          )
 
-env = gym.make("Gait3DEnv")
+env = gym.make("Gait3D")
 actions = np.random.rand(env.env.env.model.get_num_controls())
 
 env.reset()

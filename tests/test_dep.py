@@ -9,11 +9,11 @@ from deprl import env_wrappers
 from deprl.dep_controller import DEP
 
 
-register(id="Gait3DEnv",
-         entry_point="environments.osimgym:Gait3DEnv"
+register(id="Gait3D",
+         entry_point="environments.osimgym:Gait3D"
          )
 
-env = gym.make("Gait3DEnv", visualize=False)
+env = gym.make("Gait3D", visualize=False)
 env = env_wrappers.OpenSimWrapper(env)
 
 dep = DEP()
