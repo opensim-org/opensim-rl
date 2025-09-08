@@ -62,7 +62,7 @@ class OpenSimGym(gym.Env, ABC):
         pass
 
 
-class Gait3DEnv(OpenSimGym):
+class Gait3D(OpenSimGym):
 
     def __init__(self, visualize=False, accuracy=1e-3, step_size=0.0025):
 
@@ -151,38 +151,28 @@ class Gait3DEnv(OpenSimGym):
         self.min_com_height = 0.5 # m
 
     def update_adaptation_rate(self):
-        print('Updating adaptation rate...')
         reward = self._get_reward()
-        print('--> Reward: ', reward)
         self.reward_mean = self.smoothing * self.reward_mean + \
                            (1 - self.smoothing) * reward
-        print('--> Reward mean: ', self.reward_mean)
 
         if self.reward_mean > self.threshold and self.schedule_mean < 0.5:
             # performance is newly high, slow down adaptation
             self.adaptation_rate_change *= self.decay
-            print('--> Slowing down adaptation: ', self.adaptation_rate_change)
         elif self.reward_mean > self.threshold and self.schedule_mean > 0.5:
             # performance high for too long
             self.adaptation_rate += self.adaptation_rate_change
-            print('--> Adaptation rate increase: ', self.adaptation_rate)
         else:
             # performance too low
             self.adaptation_rate -= self.adaptation_rate_change
-            print('--> Adaptation rate decrease: ', self.adaptation_rate)
 
         schedule_target = 1 if self.reward_mean > self.threshold else 0
         self.schedule_mean = self.smoothing * self.schedule_mean + \
                             (1 - self.smoothing) * schedule_target
-        print('--> Schedule mean: ', self.schedule_mean)
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         """Start a new episode.
         """
-        print('Starting new episode...')
-        reward = self._get_reward()
-        print('--> Reward: ', reward)
-        # self.update_adaptation_rate()
+        self.update_adaptation_rate()
         self.model.reset()
 
         return self._get_obs(), self._get_info()

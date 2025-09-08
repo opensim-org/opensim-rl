@@ -6,12 +6,6 @@ import os
 
 from stable_baselines3 import PPO
 
-# caution: the ep rew mean reported is not discounted (i.e., gamma=1)
-def compute_discounted_return(rewards, gamma=0.0):
-    rewards = np.array(rewards)
-    discounts = gamma ** np.arange(len(rewards))
-    return np.sum(rewards * discounts)
-
 models_dir = "models_gait3d/PPO" # location of models
 model_path = f"{models_dir}/1000000.zip" # the name of the model to use
 
