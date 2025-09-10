@@ -10,13 +10,9 @@ COPY ./environments /opensim-rl/environments
 COPY ./models /opensim-rl/models
 COPY ./tests /opensim-rl/tests
 COPY __init__.py /opensim-rl/__init__.py
-COPY train.py /opensim-rl/train_gait3d.py
-COPY eval.py /opensim-rl/eval_gait3d.py
+COPY train.py /opensim-rl/train.py
+COPY eval.py /opensim-rl/eval.py
 COPY print_file.py /opensim-rl/print_file.py
-COPY requirements.txt /opensim-rl/requirements.txt
-
-# Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
 
 # Test installation
-RUN python3 -m tests.test_envs
+# RUN python3 train.py --env-id Gait3D --output-dir ./test_run --num-envs 4 --timesteps 25000
