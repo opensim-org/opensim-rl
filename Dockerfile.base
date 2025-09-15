@@ -3,47 +3,33 @@ FROM ubuntu:22.04
 
 # TODO: update to Ubuntu 24.04 and Python 3.12 with virtual env
 
-RUN apt-get update && apt-get install -y build-essential
+# Update package lists and install all required packages in a single layer
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        build-essential \
+        python3 \
+        python3-pip \
+        python3-dev \
+        python3-numpy \
+        python3-setuptools \
+        zip \
+        git \
+        curl \
+        cmake \
+        libopenblas-dev \
+        liblapack-dev \
+        wget \
+        pkgconf \
+        gfortran \
+        autoconf \
+        libtool \
+        libpcre2-dev \
+        byacc && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install Python 3
-RUN apt-get install -y python3 python3-pip python3-dev python3-numpy python3-setuptools
-
-# Install NumPy
+# Install Python packages
 COPY requirements.txt requirements.txt
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
-
-# Install zip
-RUN apt-get install -y zip
-
-# Install Git
-RUN apt-get install -y git
-
-# Install curl
-RUN apt-get install -y curl
-
-# Install CMake
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y cmake
-
-# Install blas
-RUN apt-get install -y libopenblas-dev liblapack-dev
-
-# Install wget
-RUN apt-get install -y wget
-
-# Install pkgconf
-RUN apt-get install -y pkgconf
-
-# Install fortran
-RUN apt-get install -y gfortran
-
-# Install autoconf and libtool
-RUN apt-get install -y autoconf libtool
-
-# Install PCRE2
-RUN apt-get install -y libpcre2-dev
-
-# Install yacc
-RUN apt-get install -y byacc
 
 # Install SWIG
 RUN wget -nc -q --show-progress https://github.com/swig/swig/archive/refs/tags/v4.1.1.tar.gz && \
