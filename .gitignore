@@ -11,8 +11,5 @@ opensim.log
 # pycache
 __pycache__/
 
-# wandb
-wandb/
-
 # training runs
 runs/

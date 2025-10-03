@@ -253,8 +253,6 @@ class OpenSimModel:
         outputs = dict()
         self.model.realizeAcceleration(self.state)
 
-        # TODO: generalize to all OpenSim Outputs
-
         # coordinate kinematics
         outputs["coordinate_values"] = np.zeros((self.get_num_coordinates(),),
                                                 dtype=np.float32)
