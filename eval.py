@@ -12,10 +12,9 @@ register(id="Gait3D",
         entry_point="environments.osimgym:Gait3D",
         )
 
-def eval(model_name, outputs_dir, timesteps):
+def eval(model_name, outputs_dir):
 
-    model_path = os.path.join(outputs_dir, model_name, 'models', 'PPO',
-                              f'{model_name}_{timesteps}steps')
+    model_path = os.path.join(outputs_dir, model_name, 'models', 'PPO', model_name)
     config_path = os.path.join(outputs_dir, model_name, 'models', 'PPO', 'config.json')
     config = json.load(open(config_path, 'r'))
 
@@ -42,7 +41,7 @@ def eval(model_name, outputs_dir, timesteps):
 
     sto = osim.STOFileAdapter()
     sto.write(states_table,
-              os.path.join(eval_dir, f'{model_name}_{timesteps}steps.sto'))
+              os.path.join(eval_dir, f'{model_name}.sto'))
 
     model.printToXML(os.path.join(eval_dir, f'{model_name}.osim'))
 
@@ -52,8 +51,6 @@ if __name__ == "__main__":
                         help='Directory containing the trained model and config file.')
     parser.add_argument('--output-dir', type=str, default='outputs',
                         help='Root directory for saving outputs (default: outputs)')
-    parser.add_argument('--timesteps', type=int,
-                        help='Total timesteps used per training iteration.')
     args = parser.parse_args()
 
-    eval(args.model_name, args.output_dir, args.timesteps)
+    eval(args.model_name, args.output_dir)

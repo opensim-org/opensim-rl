@@ -25,7 +25,7 @@ def make_env(env_id, seed=0, rank=0):
     set_random_seed(seed)
     return _init
 
-def train(env_id, model_name, output_dir, timesteps=1000000, num_envs=10, seed=42):
+def train(env_id, model_name, output_dir, timesteps=100000, num_envs=10, seed=42):
 
     # Update directories based on command line arguments
     model_dir = os.path.join(output_dir, model_name)
@@ -89,7 +89,7 @@ def train(env_id, model_name, output_dir, timesteps=1000000, num_envs=10, seed=4
     )
 
     # Save the model
-    model.save(os.path.join(models_dir, f'{model_name}_{timesteps}steps'))
+    model.save(os.path.join(models_dir, model_name))
 
     # Finish WandB run
     run.finish()
@@ -106,13 +106,11 @@ if __name__ == '__main__':
                         help='Root directory for saving outputs (default: outputs)')
     parser.add_argument('--timesteps', type=int, default=100000,
                         help='Total timesteps per training iteration (default: 100000)')
-    parser.add_argument('--iterations', type=int, default=1,
-                        help='Number of training iterations (default: 1)')
     parser.add_argument('--num-envs', type=int, default=10,
                         help='Number of parallel environments (default: 10)')
     parser.add_argument('--seed', type=int, default=42,
                         help='Random seed (default: 42)')
     args = parser.parse_args()
 
-    train(args.env_id, args.model_name, args.output_dir, args.timesteps, args.num_envs,
-          args.seed)
+    train(args.env_id, args.model_name, args.output_dir, args.timesteps,
+          args.num_envs, args.seed)
