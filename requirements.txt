@@ -1,3 +1,4 @@
 gymnasium
 stable-baselines3[extra]
 wandb
+numpy==2.2.6

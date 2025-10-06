@@ -13,7 +13,6 @@ register(id="Gait3D",
         )
 
 def viz(model_name, outputs_dir, timesteps):
-
     eval_dir = os.path.join(outputs_dir, model_name, 'eval')
     model = osim.Model(os.path.join(eval_dir, f'{model_name}.osim'))
     model.initSystem()
