@@ -32,6 +32,7 @@ def train(env_id, model_name, output_dir, timesteps=1000000, num_envs=10, seed=4
     models_dir = os.path.join(model_dir, 'models', 'PPO')
     logs_dir = os.path.join(model_dir, 'logs', 'PPO')
     wandb_dir = os.path.join(model_dir, 'wandb')
+    tensorboard_log_dir = os.path.join(model_dir, 'tensorboard', 'runs')
     if not os.path.exists(models_dir):
         os.makedirs(models_dir)
     if not os.path.exists(logs_dir):
@@ -58,7 +59,6 @@ def train(env_id, model_name, output_dir, timesteps=1000000, num_envs=10, seed=4
         config=config,
         sync_tensorboard=True,
     )
-    tensorboard_log = f'runs/{run.id}'
 
     # Create environments
     envs = SubprocVecEnv(
@@ -70,7 +70,7 @@ def train(env_id, model_name, output_dir, timesteps=1000000, num_envs=10, seed=4
         config['policy_type'],
         envs,
         verbose=1,
-        tensorboard_log=tensorboard_log
+        tensorboard_log=tensorboard_log_dir
     )
 
     # Prepare callbacks
